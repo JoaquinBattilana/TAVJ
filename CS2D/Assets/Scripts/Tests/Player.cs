@@ -26,5 +26,10 @@ namespace TAVJ {
             entity.transform.position = position;
             entity.transform.rotation = rotation;
         }
+
+        public void UpdatePosition(PlayerNetworkData data) {
+            entity.transform.position = data.Position;
+            entity.transform.rotation = data.Rotation;
+        }
     }
 }

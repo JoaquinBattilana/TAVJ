@@ -14,11 +14,13 @@ namespace TAVJ {
         public Dictionary<int, Player> players;
         public int clientId = -1;
         public KeyCode jump;
+        public Queue<Snapshot> snapshotQueue;
 
         void Awake() {
             channel = new Channel(serverIp, clientPort, serverPort);
             players = new Dictionary<int, Player>();
             playerClientPrefab = Resources.Load<GameObject>("PlayerClient");
+            snapshotQueue = new Queue<Snapshot>();
         }
 
         /*
@@ -80,6 +82,17 @@ namespace TAVJ {
                     break;
                 case Event.SNAPSHOT:
                     manageSnapshotEvent(buffer);
+                    if (snapshotQueue.Count >= 0) {
+                        Snapshot sp = snapshotQueue.Dequeue();
+                        var keys = sp.GetClientsIds();
+                        foreach(var key in keys) {
+                            if(players.ContainsKey(key)) {
+                                PlayerNetworkData data = sp.GetClient(key);
+                                Player p = players[key];
+                                p.UpdatePosition(data);
+                            }
+                        }
+                    }
                     break;
             }
         }
@@ -106,13 +119,8 @@ namespace TAVJ {
         }
 
         void manageSnapshotEvent(BitBuffer buffer) {
-            var playersLengths = buffer.GetInt();
-            Debug.Log("Jugadores moviendose: " + playersLengths);
-            Debug.Log("Cliente " + this.clientId + ": Recibo el evento SNAPSHOT");
-            for(var i = 0; i < playersLengths; i++) {
-                var player = players[buffer.GetInt()];
-                player.Deserialize(buffer);
-            }
+            Snapshot sp = new Snapshot(buffer);
+            snapshotQueue.Enqueue(sp);
         }
     }
 }
