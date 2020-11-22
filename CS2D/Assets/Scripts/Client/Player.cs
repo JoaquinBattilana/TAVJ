@@ -7,6 +7,7 @@ namespace TAVJ {
     public class Player {
         public int id;
         public GameObject entity;
+        PlayerNetworkData currentData;
 
         public Player(int id, GameObject entity) {
             this.id = id;
@@ -28,8 +29,14 @@ namespace TAVJ {
         }
 
         public void UpdatePosition(PlayerNetworkData data) {
+            currentData = data;
             entity.transform.position = data.Position;
             entity.transform.rotation = data.Rotation;
+        }
+
+        public void Interpolate(PlayerNetworkData data, float time) {
+            entity.transform.position = Vector3.Lerp(currentData.Position, data.Position, time);
+            entity.transform.rotation = Quaternion.Lerp(currentData.Rotation, data.Rotation, time);
         }
     }
 }

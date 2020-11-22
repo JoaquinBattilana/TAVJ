@@ -21,7 +21,7 @@ namespace TAVJ {
         }
 
         void Start() {
-            pps = 1;
+            pps = 30;
             acumTime = 0f;
         }
 
@@ -39,6 +39,7 @@ namespace TAVJ {
                 ManageEvents(clientEvent, packet);
                 packet = channel.GetPacket();
             }
+            ManageGravity();
             ManageSnapshots();
         }
         void ManageEvents(Event clientEvent, Packet packet) {
@@ -103,32 +104,52 @@ namespace TAVJ {
         }
 
         void ManageInputs(int id, Controllers controller) {
+            var player = clients[id];
+            var playerController = player.entity.GetComponent<CharacterController>();
             switch(controller) {
-                case Controllers.JUMP:
-                    Debug.Log("Servidor: Ejecuto el controller Jump del cliente " + id );
-                    var player = clients[id];
-                    player.entity.GetComponent<Rigidbody>().AddForceAtPosition(Vector3.up * 5, Vector3.zero, ForceMode.Impulse);
+                case Controllers.MOVE_FORWARD:
+                    playerController.Move(Vector3.up * 5);
                     break;
+                case Controllers.MOVE_BACKWARD:
+                    playerController.Move(Vector3.up * 5);
+                    break;
+                case Controllers.MOVE_RIGHT:
+                    playerController.Move(Vector3.up * 5);
+                    break;
+                case Controllers.MOVE_LEFT:
+                    playerController.Move(Vector3.up * 5);
+                    break;
+            }
+        }
+
+        void ManageGravity() {
+            foreach (var client in clients) {
+                var controller = client.entity.GetComponent<CharacterController>();
+                if(controller.isGrounded == false) {
+                    controller.Move(Physics.gravity * Time.deltaTime);
+                }
             }
         }
 
         void ManageSnapshots() {
             acumTime += Time.deltaTime;
             if(acumTime >= 1f/pps) {
+                var packet = Packet.Obtain();
+                packet.buffer.PutBits((int) Event.SNAPSHOT, 0, Enum.GetValues(typeof(Event)).Length);
                 var clientsMoving = clients.Where(elem => elem.IsMoving()).ToList();
+                packet.buffer.PutInt(clientsMoving.Count);
                 if(clientsMoving.Count > 0) {
-                    var packet = Packet.Obtain();
-                    packet.buffer.PutBits((int) Event.SNAPSHOT, 0, Enum.GetValues(typeof(Event)).Length);
-                    packet.buffer.PutInt(clientsMoving.Count);
                     foreach (var client in clientsMoving) {
                         client.Serialize(packet.buffer);
                     }
-                    packet.buffer.Flush();
-                    foreach (var client in clients) {
-                        channel.Send(packet, client.endpoint);
-                    }
-                    packet.Free();
+                } else {
+                    packet.buffer.PutInt(0);
                 }
+                packet.buffer.Flush();
+                foreach (var client in clients) {
+                    channel.Send(packet, client.endpoint);
+                }
+                packet.Free();
                 acumTime = 0;
             }
         }

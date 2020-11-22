@@ -14,7 +14,14 @@ namespace TAVJ {
         public Dictionary<int, Player> players;
         public int clientId = -1;
         public KeyCode jump;
+        public KeyCode moveForward;
+        public KeyCode moveRight;
+        public KeyCode moveLeft;
+        public KeyCode moveBackward;
         public Queue<Snapshot> snapshotQueue;
+        public int snapshotQueueSize = 3;
+        public float acumTime;
+        public float pps;
 
         void Awake() {
             channel = new Channel(serverIp, clientPort, serverPort);
@@ -33,6 +40,8 @@ namespace TAVJ {
             packet.buffer.Flush();
             channel.Send(packet);
             Debug.Log("Cliente Nuevo: Mando un paquete JOIN");
+            acumTime = 0f;
+            pps = 30f;
         }
 
         private void OnDestroy() {
@@ -45,20 +54,15 @@ namespace TAVJ {
         */
 
         void Update() {
+            acumTime += Time.deltaTime;
             var packet = channel.GetPacket();
             while (packet != null) {
                 Event clientEvent = (Event) packet.buffer.GetBits(0, Enum.GetValues(typeof(Event)).Length);
                 ManageServerEvents(clientEvent, packet.buffer);
                 packet = channel.GetPacket();
             }
-            if (Input.GetKeyDown(jump)) {
-                var sendPacket = Packet.Obtain();
-                sendPacket.buffer.PutBits((int) Event.INPUT, 0, Enum.GetValues(typeof(Event)).Length);
-                sendPacket.buffer.PutInt(this.clientId);
-                sendPacket.buffer.PutBits((int) Controllers.JUMP, 0, Enum.GetValues(typeof(Controllers)).Length);
-                sendPacket.buffer.Flush();
-                channel.Send(sendPacket);
-            }
+            ManageInputs();
+            Interpolate();
         }
 
         /*
@@ -82,19 +86,38 @@ namespace TAVJ {
                     break;
                 case Event.SNAPSHOT:
                     manageSnapshotEvent(buffer);
-                    if (snapshotQueue.Count >= 0) {
-                        Snapshot sp = snapshotQueue.Dequeue();
-                        var keys = sp.GetClientsIds();
-                        foreach(var key in keys) {
-                            if(players.ContainsKey(key)) {
-                                PlayerNetworkData data = sp.GetClient(key);
-                                Player p = players[key];
-                                p.UpdatePosition(data);
-                            }
-                        }
-                    }
                     break;
             }
+        }
+
+        void ManageInputs() {
+            var packet = Packet.Obtain();
+            packet.buffer.PutBits((int) Event.INPUT, 0, Enum.GetValues(typeof(Event)).Length);
+            packet.buffer.PutInt(this.clientId);
+            if (Input.GetKeyDown(jump)) {
+            }
+            if (Input.GetKeyDown(moveForward)) {
+                ManageSendInput(Controllers.MOVE_FORWARD);
+            }
+            if (Input.GetKeyDown(moveBackward)) {
+                ManageSendInput(Controllers.MOVE_BACKWARD);
+            }
+            if (Input.GetKeyDown(moveRight)) {
+                ManageSendInput(Controllers.MOVE_RIGHT);
+            }
+            if (Input.GetKeyDown(moveLeft)) {
+                ManageSendInput(Controllers.MOVE_LEFT);
+            }
+        }
+
+        void ManageSendInput(Controllers key) {
+            var packet = Packet.Obtain();
+            packet.buffer.PutBits((int) Event.INPUT, 0, Enum.GetValues(typeof(Event)).Length);
+            packet.buffer.PutInt(this.clientId);
+            packet.buffer.PutBits((int) key, 0, Enum.GetValues(typeof(Controllers)).Length);
+            packet.buffer.Flush();
+            channel.Send(packet);
+            packet.Free();
         }
 
         void manageJoinEvent(BitBuffer buffer) {
@@ -121,6 +144,29 @@ namespace TAVJ {
         void manageSnapshotEvent(BitBuffer buffer) {
             Snapshot sp = new Snapshot(buffer);
             snapshotQueue.Enqueue(sp);
+            acumTime = 0;
+            if (snapshotQueue.Count >= snapshotQueueSize) {
+                sp = snapshotQueue.Dequeue();
+                var keys = sp.GetClientsIds();
+                foreach(var key in keys) {
+                    if(players.ContainsKey(key)) {
+                        PlayerNetworkData data = sp.GetClient(key);
+                        Player p = players[key];
+                        p.UpdatePosition(data);
+                    }
+                }
+            }
+        }
+
+        void Interpolate() {
+            if(snapshotQueue.Count >= snapshotQueueSize) {
+                Snapshot nextSnapshot = snapshotQueue.Peek();
+                foreach(var playerId in nextSnapshot.GetClientsIds()) {
+                    if(players.ContainsKey(playerId)) {
+                        players[playerId].Interpolate(nextSnapshot.GetClient(playerId), acumTime/(1f/pps));
+                    }
+                }
+            }
         }
     }
 }

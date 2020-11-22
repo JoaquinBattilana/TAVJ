@@ -403,7 +403,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1327267248
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -419,7 +419,14 @@ MonoBehaviour:
   clientPort: 9001
   playerClientPrefab: {fileID: 0}
   clientId: 0
-  jump: 32
+  jump: 0
+  moveForward: 0
+  moveRight: 0
+  moveLeft: 0
+  moveBackward: 0
+  snapshotQueueSize: 3
+  acumTime: 0
+  pps: 0
 --- !u!4 &1327267249
 Transform:
   m_ObjectHideFlags: 0
@@ -512,7 +519,14 @@ MonoBehaviour:
   clientPort: 9002
   playerClientPrefab: {fileID: 0}
   clientId: 0
-  jump: 256
+  jump: 0
+  moveForward: 0
+  moveRight: 0
+  moveLeft: 0
+  moveBackward: 0
+  snapshotQueueSize: 3
+  acumTime: 0
+  pps: 0
 --- !u!4 &2102664423
 Transform:
   m_ObjectHideFlags: 0

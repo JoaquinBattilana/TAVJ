@@ -24,4 +24,12 @@ public class Snapshot
     public PlayerNetworkData GetClient(int id) {
         return _playersData[id];
     }
+
+    public override string ToString() {
+        var returnString = "";
+        foreach(KeyValuePair<int, PlayerNetworkData> kvp in _playersData) {
+            returnString += string.Format("Key = {0}, Value= {1}", kvp.Key, kvp.Value);
+        }
+        return returnString;
+    }
 }
