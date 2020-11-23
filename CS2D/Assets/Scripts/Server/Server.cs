@@ -39,14 +39,16 @@ namespace TAVJ {
                 ManageEvents(clientEvent, packet);
                 packet = channel.GetPacket();
             }
-            ManageGravity();
             ManageSnapshots();
+        }
+
+        void FixedUpdate() {
+            ManageGravity();
         }
         void ManageEvents(Event clientEvent, Packet packet) {
             switch(clientEvent) {
                 case Event.JOIN:
                     var clientId = clients.Count;
-                    Debug.Log("Servidor: Recibo un paquete JOIN y creo un cliente con el id: " + clientId);
                     ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(playerServerPrefab, Vector3.zero, Quaternion.identity));
                     clients.Add(client);
                     SendJoin(client);
@@ -54,9 +56,7 @@ namespace TAVJ {
                     break;
                 case Event.INPUT:
                     var id = packet.buffer.GetInt();
-                    Debug.Log("Servidor: Recibo un evento INPUT del cliente: " + id);
-                    Controllers controller = (Controllers) packet.buffer.GetBits(0, Enum.GetValues(typeof(Controllers)).Length);
-                    ManageInputs(id, controller);
+                    ManageInputs(id, packet.buffer);
                     break;
             }
         }
@@ -103,23 +103,11 @@ namespace TAVJ {
             packet.Free();
         }
 
-        void ManageInputs(int id, Controllers controller) {
+        void ManageInputs(int id, BitBuffer buffer) {
             var player = clients[id];
-            var playerController = player.entity.GetComponent<CharacterController>();
-            switch(controller) {
-                case Controllers.MOVE_FORWARD:
-                    playerController.Move(Vector3.up * 5);
-                    break;
-                case Controllers.MOVE_BACKWARD:
-                    playerController.Move(Vector3.up * 5);
-                    break;
-                case Controllers.MOVE_RIGHT:
-                    playerController.Move(Vector3.up * 5);
-                    break;
-                case Controllers.MOVE_LEFT:
-                    playerController.Move(Vector3.up * 5);
-                    break;
-            }
+            var controller = player.entity.GetComponent<CharacterController>();
+            ClientInput input = new ClientInput(buffer);
+            input.Execute(controller);
         }
 
         void ManageGravity() {

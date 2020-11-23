@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public class Snapshot
-{
+public class Snapshot {
     private Dictionary <int, PlayerNetworkData> _playersData;
 
     public Snapshot(BitBuffer buffer) {
