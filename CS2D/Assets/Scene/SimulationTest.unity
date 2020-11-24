@@ -320,7 +320,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1327267248
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -334,11 +334,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   clientPort: 9001
-  playerClientPrefab: {fileID: 0}
-  clientId: 0
-  snapshotQueueSize: 3
-  acumTime: 0
-  pps: 0
+  _clientId: -1
 --- !u!4 &1327267249
 Transform:
   m_ObjectHideFlags: 0
@@ -382,9 +378,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71013b16ee525fa4daaf4f6d5dc9d0ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerServerPrefab: {fileID: 6672457008053702379, guid: ab9de952942bb44458f576a0e9b4b0a5,
-    type: 3}
-  pps: 10
 --- !u!4 &1985672359
 Transform:
   m_ObjectHideFlags: 0
@@ -429,11 +422,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   clientPort: 9002
-  playerClientPrefab: {fileID: 0}
-  clientId: 0
-  snapshotQueueSize: 3
-  acumTime: 0
-  pps: 0
+  _clientId: -1
 --- !u!4 &2102664423
 Transform:
   m_ObjectHideFlags: 0

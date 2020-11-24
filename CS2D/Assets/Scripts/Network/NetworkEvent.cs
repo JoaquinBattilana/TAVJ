@@ -1,7 +1,9 @@
+using System;
+
 namespace TAVJ {
-    public class Event {
-        private Type _type;
-        public Type Type {
+    public class NetworkEvent {
+        private EventType _type;
+        public EventType Type {
             get { return _type; }
         }
 
@@ -12,12 +14,12 @@ namespace TAVJ {
 
         private bool _reliable = false;
 
-        public Event(Packet packet) {
-            _type = (Type) packet.buffer.GetBits(0, Enum.GetValues(typeof(Event)).Length);
+        public NetworkEvent(Packet packet) {
+            _type = (EventType) packet.buffer.GetBits(0, Enum.GetValues(typeof(EventType)).Length);
             _packet = packet;
         }
 
-        public enum Type {
+        public enum EventType {
             JOIN = 0,
             DISCONNECT = 1,
             INPUT = 2,

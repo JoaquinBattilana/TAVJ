@@ -7,17 +7,24 @@ namespace TAVJ {
     public class ClientData {
         public int id;
         public IPEndPoint endpoint;
-        public GameObject entity;
+        private GameObject _entity;
+        private CharacterController _controller;
+        private InputManager _inputManager;
+        public InputManager InputManager {
+            get { return _inputManager; }
+        }
 
         public ClientData(int id, IPEndPoint endpoint, GameObject playerInstance) {
             this.endpoint = endpoint;
             this.id = id;
-            entity = playerInstance;
+            _entity = playerInstance;
+            _controller = _entity.GetComponent<CharacterController>();
+            _inputManager = new InputManager();
         }
 
-        public void Serialize(BitBuffer buffer) {
-            var position = entity.transform.position;
-            var rotation = entity.transform.rotation;
+        public void SerializePosition(BitBuffer buffer) {
+            var position = _entity.transform.position;
+            var rotation = _entity.transform.rotation;
             buffer.PutInt(id);
             buffer.PutFloat(position.x);
             buffer.PutFloat(position.y);
@@ -28,9 +35,23 @@ namespace TAVJ {
             buffer.PutFloat(rotation.w);
         }
 
+        public void DeserializeInputs(BitBuffer buffer) {
+            _inputManager.Deserialize(buffer);
+        }
+
+        public void ExecuteInputs() {
+            _inputManager.ExecuteInputs(_controller);
+        }
+
+        public void ExecuteGravity() {
+            if(_controller.isGrounded == false) {
+                _controller.Move(Physics.gravity * Time.deltaTime);
+            }
+        }
+
         public bool IsMoving() {
-            var isMoving = this.entity.transform.hasChanged;
-            this.entity.transform.hasChanged = false;
+            var isMoving = _entity.transform.hasChanged;
+            _entity.transform.hasChanged = false;
             return isMoving;
         }
     }

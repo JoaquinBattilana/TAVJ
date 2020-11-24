@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EventManager {
-    private List<Event> _events;
+namespace TAVJ {
+    public class EventManager {
+        private List<NetworkEvent> _events;
 
-    public EventManager() {
-        _events = new List<Events>();
-    }
+        public EventManager() {
+            _events = new List<NetworkEvent>();
+        }
 
-    public AddEvent(Event event) {
-        _events.Add(event);
+        public void AddEvent(NetworkEvent nEvent) {
+            _events.Add(nEvent);
+        }
     }
 }

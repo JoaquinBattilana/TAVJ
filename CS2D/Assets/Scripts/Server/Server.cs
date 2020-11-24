@@ -8,36 +8,33 @@ using System.Linq;
 namespace TAVJ {
     public class Server : MonoBehaviour
     {
-        private Channel channel;
-        private int port = 9000;
-        public GameObject playerServerPrefab;
-        public List<ClientData> clients;
-        public int pps;
-        private float acumTime;
+        private int _port = 9000;
+        private GameObject _playerServerPrefab;
+        private List<ClientData> _clients;
+        private int _pps;
+        private float _acumTime;
+        private NetworkManager _networkManager;
 
         void Awake() {
-            channel = new Channel(port);
-            clients = new List<ClientData>();
+            _networkManager = new NetworkManager(_port);
+            _clients = new List<ClientData>();
+            _playerServerPrefab = Resources.Load<GameObject>("PlayerServer");
         }
 
         void Start() {
-            pps = 30;
-            acumTime = 0f;
+            _pps = 20;
+            _acumTime = 0f;
         }
 
         private void OnDestroy() {
-            channel.Disconnect();
+            _networkManager.Disconnect();
         }
 
-        /*
-        Escucha los eventos
-        */
         void Update() {
-            var packet = channel.GetPacket();
-            while ( packet != null) {
-                Event clientEvent = (Event) packet.buffer.GetBits(0, Enum.GetValues(typeof(Event)).Length);
-                ManageEvents(clientEvent, packet);
-                packet = channel.GetPacket();
+            NetworkEvent nEvent = _networkManager.GetEvent();
+            while ( nEvent != null) {
+                ManageEvents(nEvent);
+                nEvent = _networkManager.GetEvent();
             }
             ManageSnapshots();
         }
@@ -45,101 +42,48 @@ namespace TAVJ {
         void FixedUpdate() {
             ManageGravity();
         }
-        void ManageEvents(Event clientEvent, Packet packet) {
-            switch(clientEvent) {
-                case Event.JOIN:
-                    var clientId = clients.Count;
-                    ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(playerServerPrefab, Vector3.zero, Quaternion.identity));
-                    clients.Add(client);
-                    SendJoin(client);
-                    SendJoinBroadcast(client);
+
+        void ManageEvents(NetworkEvent nEvent) {
+            switch(nEvent.Type) {
+                case NetworkEvent.EventType.JOIN:
+                    ManageJoinEvent(nEvent);
                     break;
-                case Event.INPUT:
-                    var id = packet.buffer.GetInt();
-                    ManageInputs(id, packet.buffer);
+                case NetworkEvent.EventType.INPUT:
+                    ManageInputEvent(nEvent);
                     break;
             }
-        }
-
-        /*
-        Agrega a un paquete:
-            - Evento JOIN_BROADCAST
-            - Serialize del cliente nuevo (IdCliente posicion rotacion)
-        Envia a todos los clientes menos el que se unio el paquete
-        */
-
-        void SendJoinBroadcast(ClientData clientData) {
-            var packet = Packet.Obtain();
-            packet.buffer.PutBits((int) Event.JOIN_BROADCAST, 0, Enum.GetValues(typeof(Event)).Length);
-            clientData.Serialize(packet.buffer);
-            packet.buffer.Flush();
-            foreach (var client in clients) {
-                if(client.id != clientData.id) {
-                    channel.Send(packet, client.endpoint);
-                }
-            }
-            packet.Free();
-        }
-
-        /*
-        Agrega a un paquete:
-            - Evento JOIN
-            - IdCliente creado
-            - Cantidad de clientes actuales (nuevo cliente incluido)
-            - Serialize de clientes (iDCliente posicion rotacion)
-        Envia al cliente el paquete
-        */
-
-        void SendJoin(ClientData clientData) {
-            var packet = Packet.Obtain();
-            packet.buffer.PutBits((int) Event.JOIN, 0, Enum.GetValues(typeof(Event)).Length);
-            packet.buffer.PutInt(clientData.id);
-            packet.buffer.PutInt(clients.Count);
-            foreach (var client in clients) {
-                client.Serialize(packet.buffer);
-            }
-            packet.buffer.Flush();
-            channel.Send(packet, clientData.endpoint);
-            packet.Free();
-        }
-
-        void ManageInputs(int id, BitBuffer buffer) {
-            var player = clients[id];
-            var controller = player.entity.GetComponent<CharacterController>();
-            ClientInput input = new ClientInput(buffer);
-            input.Execute(controller);
         }
 
         void ManageGravity() {
-            foreach (var client in clients) {
-                var controller = client.entity.GetComponent<CharacterController>();
-                if(controller.isGrounded == false) {
-                    controller.Move(Physics.gravity * Time.deltaTime);
-                }
+            foreach (var client in _clients) {
+                client.ExecuteGravity();
             }
         }
 
         void ManageSnapshots() {
-            acumTime += Time.deltaTime;
-            if(acumTime >= 1f/pps) {
-                var packet = Packet.Obtain();
-                packet.buffer.PutBits((int) Event.SNAPSHOT, 0, Enum.GetValues(typeof(Event)).Length);
-                var clientsMoving = clients.Where(elem => elem.IsMoving()).ToList();
-                packet.buffer.PutInt(clientsMoving.Count);
-                if(clientsMoving.Count > 0) {
-                    foreach (var client in clientsMoving) {
-                        client.Serialize(packet.buffer);
-                    }
-                } else {
-                    packet.buffer.PutInt(0);
-                }
-                packet.buffer.Flush();
-                foreach (var client in clients) {
-                    channel.Send(packet, client.endpoint);
-                }
-                packet.Free();
-                acumTime = 0;
+            _acumTime += Time.deltaTime;
+            if(_acumTime >= 1f/_pps) {
+                _networkManager.SendSnapshots(_clients);
+                _acumTime = 0;
             }
+        }
+
+        void ManageJoinEvent(NetworkEvent nEvent) {
+            var packet = nEvent.Packet;
+            var clientId = _clients.Count;
+            ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(_playerServerPrefab, Vector3.zero, Quaternion.identity));
+            _clients.Add(client);
+            _networkManager.SendJoinAck(client, _clients);
+            _networkManager.SendJoinBroadcast(client, _clients);
+        }
+
+        void ManageInputEvent(NetworkEvent nEvent) {
+            var packet = nEvent.Packet;
+            var id = packet.buffer.GetInt();
+            ClientData client = _clients[id];
+            client.DeserializeInputs(packet.buffer);
+            client.ExecuteInputs();
+            _networkManager.SendInputAck(client);
         }
     }
 }

@@ -6,12 +6,20 @@ using UnityEngine;
 namespace TAVJ {
     public class Player {
         public int id;
-        public GameObject entity;
-        PlayerNetworkData currentData;
+        private GameObject _entity;
+        private CharacterController _controller;
+        public CharacterController Controller {
+            get { return _controller; }
+        }
+        private Vector3 _lastPosition;
+        private Quaternion _lastRotation;
 
         public Player(int id, GameObject entity) {
             this.id = id;
-            this.entity = entity;
+            _entity = entity;
+            _lastPosition = new Vector3(0, 0, 0);
+            _lastRotation = new Quaternion(0, 0, 0, 0);
+            _controller = _entity.GetComponent<CharacterController>();
         }
 
         public void Deserialize(BitBuffer buffer) {
@@ -24,19 +32,18 @@ namespace TAVJ {
             rotation.y = buffer.GetFloat();
             rotation.z = buffer.GetFloat();
             rotation.w = buffer.GetFloat();
-            entity.transform.position = position;
-            entity.transform.rotation = rotation;
+            _entity.transform.position = position;
+            _entity.transform.rotation = rotation;
         }
 
-        public void UpdatePosition(PlayerNetworkData data) {
-            currentData = data;
-            entity.transform.position = data.Position;
-            entity.transform.rotation = data.Rotation;
+        public void UpdateLastPosition() {
+            _lastPosition = new Vector3(_entity.transform.position.x, _entity.transform.position.y, _entity.transform.position.z);
+            _lastRotation = new Quaternion(_entity.transform.rotation.x, _entity.transform.rotation.y, _entity.transform.rotation.z, _entity.transform.rotation.w);
         }
 
         public void Interpolate(PlayerNetworkData data, float time) {
-            entity.transform.position = Vector3.Lerp(currentData.Position, data.Position, time);
-            entity.transform.rotation = Quaternion.Lerp(currentData.Rotation, data.Rotation, time);
+            _entity.transform.position = Vector3.Lerp(_lastPosition, data.Position, time);
+            _entity.transform.rotation = Quaternion.Lerp(_lastRotation, data.Rotation, time);
         }
     }
 }
