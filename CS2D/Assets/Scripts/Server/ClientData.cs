@@ -8,6 +8,9 @@ namespace TAVJ {
         public int id;
         public IPEndPoint endpoint;
         private GameObject _entity;
+        public GameObject Entity {
+            get { return _entity; }
+        }
         private CharacterController _controller;
         private GameObject _head;
         private InputManager _inputManager;
@@ -15,6 +18,7 @@ namespace TAVJ {
             get { return _inputManager; }
         }
         private int _health;
+        private int _points;
         public int Health {
             get { return _health; }
         }
@@ -26,6 +30,7 @@ namespace TAVJ {
             _controller = _entity.GetComponent<CharacterController>();
             _inputManager = new InputManager();
             _health = 100;
+            _points = 0;
             _head = _entity.FindInChildren("RigSpine1");
         }
 
@@ -36,6 +41,7 @@ namespace TAVJ {
             buffer.PutInt(id);
             buffer.PutInt(_inputManager.MostBigInput);
             buffer.PutInt(_health);
+            buffer.PutInt(_points);
             buffer.PutFloat(position.x);
             buffer.PutFloat(position.y);
             buffer.PutFloat(position.z);
@@ -73,6 +79,11 @@ namespace TAVJ {
 
         public override string ToString() {
             return "" + id;
+        }
+
+        public void Hit() {
+            _health -= 20;
+            Debug.Log(_health);
         }
     }
 }

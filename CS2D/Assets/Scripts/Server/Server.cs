@@ -54,6 +54,12 @@ namespace TAVJ {
                 case NetworkEvent.EventType.INPUT:
                     ManageInputEvent(nEvent);
                     break;
+                case NetworkEvent.EventType.HIT:
+                    ManageHitEvent(nEvent);
+                    break;
+                case NetworkEvent.EventType.DISCONNECT:
+                    ManageDisconnectEvent(nEvent);
+                    break;
             }
         }
 
@@ -74,7 +80,7 @@ namespace TAVJ {
         void ManageJoinEvent(NetworkEvent nEvent) {
             var packet = nEvent.Packet;
             var clientId = _clients.Count;
-            ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(playerServerPrefab, Vector3.zero, Quaternion.identity));
+            ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(playerServerPrefab, new Vector3(0, -25f, 0) , Quaternion.identity));
             _clients.Add(client);
             _networkManager.SendJoinAck(client, _clients);
             _networkManager.SendJoinBroadcast(client, _clients);
@@ -85,6 +91,31 @@ namespace TAVJ {
             var id = packet.buffer.GetInt();
             ClientData client = _clients[id];
             client.DeserializeInputs(packet.buffer);
+        }
+
+        void ManageHitEvent(NetworkEvent nEvent) {
+            var packet = nEvent.Packet;
+            var clientId = packet.buffer.GetInt();
+            var clientHit = packet.buffer.GetInt();
+            int ack = packet.buffer.GetInt();
+            foreach(ClientData data in _clients) {
+                if(data.id == clientHit) {
+                    data.Hit();
+                }
+            }
+            _networkManager.SendHitAck(_clients[clientId], ack);
+        }
+
+        void ManageDisconnectEvent(NetworkEvent nEvent) {
+            var packet = nEvent.Packet;
+            var clientId = packet.buffer.GetInt();
+            foreach(ClientData data in _clients) {
+                if(data.id == clientId) {
+                    Destroy(data.Entity, 1f);
+                    _clients.Remove(data);
+                }
+            }
+            _networkManager.SendDisconnectBroadcast(clientId, _clients);
         }
 
         void ExecuteInputs() {

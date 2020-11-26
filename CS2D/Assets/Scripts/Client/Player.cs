@@ -22,12 +22,17 @@ namespace TAVJ {
         public int Health {
             get { return _health; }
         }
+        private int _points;
+        public int Points {
+            get { return _points; }
+        }
         private int _mostBigInput;
 
         public Player(int id, GameObject entity) {
             this.id = id;
             _entity = entity;
             _health = 100;
+            _points = 0;
             _lastPosition = new Vector3(0, 0, 0);
             _lastRotation = new Quaternion(0, 0, 0, 0);
             _lastHeadRotation = new Quaternion(0, 0, 0, 0);
@@ -41,6 +46,7 @@ namespace TAVJ {
             var headRotation = new Quaternion();
             _mostBigInput = buffer.GetInt();
             _health = buffer.GetInt();
+            _points = buffer.GetInt();
             position.x = buffer.GetFloat();
             position.y = buffer.GetFloat();
             position.z = buffer.GetFloat();
@@ -63,9 +69,21 @@ namespace TAVJ {
 
         public void Conciliate(GameObject dummy) {
             GameObject dummyHead = dummy.FindInChildren("RigSpine1").gameObject;
-            _entity.transform.position = dummy.transform.position;
-            _entity.transform.rotation = dummy.transform.rotation;
-            _head.transform.rotation = dummyHead.transform.rotation;
+            if(VectorDifference(_entity.transform.position, dummy.transform.position, 0.1f) ) {
+                _entity.transform.position = dummy.transform.position;
+            }
+            if (VectorDifference(_entity.transform.eulerAngles, dummy.transform.eulerAngles, 1f)) {
+                _entity.transform.rotation = dummy.transform.rotation;
+            }
+            // _head.transform.rotation = dummyHead.transform.rotation;
+        }
+
+        public bool VectorDifference(Vector3 v1, Vector3 v2, float treshhold) {
+            Vector3 difference = v1 - v2;
+            if(difference.x > treshhold || difference.y > treshhold || difference.z > treshhold || difference.x  < -treshhold || difference.y < -treshhold || difference.z < -treshhold) {
+                return true;
+            }
+            return false;
         }
 
         public void UpdateLastPosition() {
@@ -77,7 +95,7 @@ namespace TAVJ {
         public void Interpolate(PlayerNetworkData data, float time) {
             _entity.transform.position = Vector3.Lerp(_lastPosition, data.Position, time);
             _entity.transform.rotation = Quaternion.Lerp(_lastRotation, data.Rotation, time);
-            _head.transform.rotation = Quaternion.Lerp(_lastHeadRotation, data.HeadRotation, time);
+            // _head.transform.rotation = Quaternion.Lerp(_lastHeadRotation, data.HeadRotation, time);
         }
     }
 }

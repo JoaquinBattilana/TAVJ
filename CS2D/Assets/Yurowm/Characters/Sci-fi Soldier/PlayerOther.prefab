@@ -13,9 +13,10 @@ GameObject:
   - component: {fileID: 6373469874966488675}
   - component: {fileID: 6373469874966488673}
   - component: {fileID: 2864805624119149158}
+  - component: {fileID: 8793308658162015547}
   m_Layer: 9
   m_Name: PlayerOther
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -84,7 +85,7 @@ MonoBehaviour:
   leftGunBone: {fileID: 6373469874977247121}
   arsenal:
   - name: Empty
-    rightGun: {fileID: 0}
+    rightGun: {fileID: 100000, guid: d992a232642f7574b80a75c2ca4b4cb8, type: 3}
     leftGun: {fileID: 0}
     controller: {fileID: 9100000, guid: e4d38f097ea35254fb4b833d568bb089, type: 2}
   - name: Rifle
@@ -109,6 +110,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.5, z: 0}
+--- !u!114 &8793308658162015547
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6373469874977215011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a537a11cbbb40714cbf9e90e1ce069c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  id: -1
 --- !u!1 &6373469874977215361
 GameObject:
   m_ObjectHideFlags: 0

@@ -25,7 +25,10 @@ namespace TAVJ {
             INPUT = 2,
             JOIN_BROADCAST = 3,
             SNAPSHOT = 4,
-            INPUT_ACK = 5
+            INPUT_ACK = 5,
+            HIT = 6,
+            HIT_ACK = 7,
+            DISCONNECT_BROADCAST= 8
         }
     }
 }

@@ -47,9 +47,9 @@ namespace TAVJ {
             Vector3 movement = Vector3.zero;
             movement += (entity.transform.forward.normalized * _vertical);
             movement += (entity.transform.right.normalized * _horizontal);
-            controller.Move(movement * 5f * Time.deltaTime);
+            controller.Move(movement * 2f * Time.deltaTime);
             entity.transform.Rotate(0, _mouseX * 2f, 0);
-            head.transform.Rotate(_mouseY * 2f, 0, 0);
+            //head.transform.Rotate(_mouseY * 2f, 0, 0);
         }
     }
 }

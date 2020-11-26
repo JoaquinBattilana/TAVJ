@@ -29,11 +29,17 @@ public class PlayerNetworkData
         get { return _health; }
     }
 
+    private int _points;
+    public int Points {
+        get { return _points; }
+    }
+
     public PlayerNetworkData(BitBuffer buffer) {
         _position = new Vector3();
         _rotation = new Quaternion();
         _mostBigInput = buffer.GetInt();
         _health = buffer.GetInt();
+        _points = buffer.GetInt();
         _position.x = buffer.GetFloat();
         _position.y = buffer.GetFloat();
         _position.z = buffer.GetFloat();
