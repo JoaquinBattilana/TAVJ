@@ -8,17 +8,19 @@ using System.Linq;
 namespace TAVJ {
     public class Server : MonoBehaviour
     {
-        private int _port = 9000;
-        private GameObject _playerServerPrefab;
+        private int _serverPort = 9000;
+        public GameObject playerServerPrefab;
         private List<ClientData> _clients;
         private int _pps;
         private float _acumTime;
         private NetworkManager _networkManager;
 
         void Awake() {
-            _networkManager = new NetworkManager(_port);
+            if(PlayerPrefs.HasKey("serverPort")) {
+                _serverPort = PlayerPrefs.GetInt("serverPort");
+            }
+            _networkManager = new NetworkManager(_serverPort);
             _clients = new List<ClientData>();
-            _playerServerPrefab = Resources.Load<GameObject>("PlayerServer");
         }
 
         void Start() {
@@ -36,11 +38,12 @@ namespace TAVJ {
                 ManageEvents(nEvent);
                 nEvent = _networkManager.GetEvent();
             }
-            ManageSnapshots();
         }
 
         void FixedUpdate() {
             ManageGravity();
+            ExecuteInputs();
+            ManageSnapshots();
         }
 
         void ManageEvents(NetworkEvent nEvent) {
@@ -71,7 +74,7 @@ namespace TAVJ {
         void ManageJoinEvent(NetworkEvent nEvent) {
             var packet = nEvent.Packet;
             var clientId = _clients.Count;
-            ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(_playerServerPrefab, Vector3.zero, Quaternion.identity));
+            ClientData client = new ClientData(clientId, packet.fromEndPoint, Instantiate(playerServerPrefab, Vector3.zero, Quaternion.identity));
             _clients.Add(client);
             _networkManager.SendJoinAck(client, _clients);
             _networkManager.SendJoinBroadcast(client, _clients);
@@ -82,8 +85,12 @@ namespace TAVJ {
             var id = packet.buffer.GetInt();
             ClientData client = _clients[id];
             client.DeserializeInputs(packet.buffer);
-            client.ExecuteInputs();
-            _networkManager.SendInputAck(client);
+        }
+
+        void ExecuteInputs() {
+            foreach(ClientData client in _clients) {
+                client.ExecuteInputs();
+            }
         }
     }
 }

@@ -2,26 +2,37 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 
 namespace TAVJ {
     public class Client : MonoBehaviour {
-        private GameObject _playerClientPrefab;
-        public int clientPort = 9001;
-        private int serverPort = 9000;
-        private string serverIp = "127.0.0.1";
+        public GameObject playerClientPrefab;
+        public GameObject otherPlayerClientPrefab;
+        public GameObject dummyPrefab;
+        public GameObject dummy;
+        public GameObject dummyHead;
+        public string clientDestIp = "127.0.0.1";
+        public int clientSourcePort;
+        public int clientDestPort = 9000;
         public int _clientId = -1;
         private Dictionary<int, Player> _players;
         private NetworkManager _networkManager;
         private SnapshotManager _snapshotManager;
         private InputManager _inputManager;
         private float _acumTime = 0;
+        private bool _menuOpen = false;
 
         void Awake() {
             _players = new Dictionary<int, Player>();
-            _playerClientPrefab = Resources.Load<GameObject>("PlayerClient");
-            _networkManager = new NetworkManager(serverIp, clientPort, serverPort);
             _snapshotManager = new SnapshotManager();
             _inputManager = new InputManager();
+            if(PlayerPrefs.HasKey("clientSourcePort") && PlayerPrefs.HasKey("clientDestIp") && PlayerPrefs.HasKey("clientDestPort")) {
+                clientSourcePort = PlayerPrefs.GetInt("clientSourcePort");
+                clientDestPort = PlayerPrefs.GetInt("clientDestPort");
+                clientDestIp = PlayerPrefs.GetString("clientDestIp");
+            }
+            PlayerPrefs.DeleteAll();
+            _networkManager = new NetworkManager(clientDestIp, clientSourcePort, clientDestPort);
         }
 
         void Start() {
@@ -38,12 +49,36 @@ namespace TAVJ {
                 ManageEvent(nEvent);
                 nEvent = _networkManager.GetEvent();
             }
+            if(Input.GetKeyDown(KeyCode.Escape)) {
+                _menuOpen = !_menuOpen;
+                if(!_menuOpen) {
+                    Cursor.lockState = CursorLockMode.None;
+                } else {
+                    Cursor.lockState = CursorLockMode.Locked;
+                }
+            }
+            if(Input.GetKeyDown(KeyCode.Mouse0)){
+                RaycastHit hit;
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            }
         }
 
         void FixedUpdate() {
             _acumTime += Time.deltaTime;
-            ManageInputs();
-            _snapshotManager.Interpolate(_players, _acumTime, _clientId);
+            if(_clientId != -1) {
+                ManageInputs();
+                _snapshotManager.Interpolate(_players, _acumTime, _clientId);
+                Snapshot currentSnapshot = _snapshotManager.CurrentSnapshot;
+                if (currentSnapshot != null && !currentSnapshot.IsEmpty() && currentSnapshot.GetClient(_clientId) != null) {
+                    PlayerNetworkData meInSnapshot = currentSnapshot.GetClient(_clientId);
+                    _inputManager.RemoveAckInputs(meInSnapshot.MostBigInput);
+                    dummy.transform.position = meInSnapshot.Position;
+                    dummy.transform.rotation = meInSnapshot.Rotation;
+                    dummyHead.transform.rotation = meInSnapshot.Rotation;
+                    _inputManager.ExecuteConciliateInputs(dummy);
+                    _players[_clientId].Conciliate(dummy);
+                }
+            }
         }
 
         private void ManageEvent(NetworkEvent nEvent) {
@@ -57,9 +92,6 @@ namespace TAVJ {
                 case NetworkEvent.EventType.SNAPSHOT:
                     manageSnapshotEvent(nEvent);
                     break;
-                case NetworkEvent.EventType.INPUT_ACK:
-                    ManageInputAck(nEvent);
-                    break;
             }
         }
 
@@ -67,18 +99,26 @@ namespace TAVJ {
             BitBuffer buffer = nEvent.Packet.buffer;
             _clientId = buffer.GetInt();
             var playersLength = buffer.GetInt();
+            Debug.Log(playersLength);
             for(var i = 0; i < playersLength; i++) {
                 var clientId = buffer.GetInt();
-                var player = new Player(clientId, Instantiate(_playerClientPrefab, Vector3.zero, Quaternion.identity));
+                Player player;
+                if(clientId == _clientId) {
+                    player = new Player(clientId, Instantiate(playerClientPrefab, Vector3.zero, Quaternion.identity));
+                } else {
+                    player = new Player(clientId, Instantiate(otherPlayerClientPrefab, Vector3.zero, Quaternion.identity));
+                }
                 _players.Add(player.id, player);
                 player.Deserialize(buffer);
             }
+            dummy = Instantiate(dummyPrefab, Vector3.zero, Quaternion.identity);
+            dummyHead = dummy.FindInChildren("RigSpine1");
         }
 
         void manageJoinBroadcastEvent(NetworkEvent nEvent) {
             BitBuffer buffer = nEvent.Packet.buffer;
             var newClientId = buffer.GetInt();
-            var newPlayer = new Player(newClientId, Instantiate(_playerClientPrefab, Vector3.zero, Quaternion.identity));
+            var newPlayer = new Player(newClientId, Instantiate(otherPlayerClientPrefab, Vector3.zero, Quaternion.identity));
             _players.Add(newPlayer.id, newPlayer);
             newPlayer.Deserialize(buffer);
         }
@@ -93,17 +133,20 @@ namespace TAVJ {
         }
 
         void ManageInputs() {
-            var horizontal = Input.GetAxisRaw("Horizontal");
-            var vertical = Input.GetAxisRaw("Vertical");
-            _inputManager.Add(horizontal, vertical);
+            float horizontal = Input.GetAxisRaw("Horizontal");
+            float vertical = Input.GetAxisRaw("Vertical");
+            float mouseX = Input.GetAxis("Mouse X");
+            float mouseY = Input.GetAxis("Mouse Y");
+            Player me = _players[_clientId];
+            if( horizontal != 0 || vertical != 0 || mouseX != 0 || mouseY != 0) {
+                _inputManager.Add(horizontal, vertical, mouseX, mouseY);
+                _inputManager.ExecuteLast(me.Entity);
+            }
             if(_inputManager.Inputs.Count > 0) {
                 _networkManager.SendInputs(_clientId, _inputManager);
             }
-        }
-
-        void ManageInputAck(NetworkEvent nEvent) {
-            BitBuffer buffer = nEvent.Packet.buffer;
-            _inputManager.RemoveAckInputs(buffer);
+            me.PredictGravity();
+            dummy.GetComponent<CharacterController>().Move(Physics.gravity * Time.deltaTime);
         }
     }
 }

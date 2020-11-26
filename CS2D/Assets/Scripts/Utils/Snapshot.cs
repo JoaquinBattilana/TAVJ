@@ -21,7 +21,14 @@ public class Snapshot {
     }
 
     public PlayerNetworkData GetClient(int id) {
-        return _playersData[id];
+        if (_playersData.ContainsKey(id)) {
+            return _playersData[id];
+        }
+        return null;
+    }
+
+    public bool IsEmpty() {
+        return _playersData.Count == 0;
     }
 
     public override string ToString() {

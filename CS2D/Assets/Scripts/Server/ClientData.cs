@@ -9,9 +9,14 @@ namespace TAVJ {
         public IPEndPoint endpoint;
         private GameObject _entity;
         private CharacterController _controller;
+        private GameObject _head;
         private InputManager _inputManager;
         public InputManager InputManager {
             get { return _inputManager; }
+        }
+        private int _health;
+        public int Health {
+            get { return _health; }
         }
 
         public ClientData(int id, IPEndPoint endpoint, GameObject playerInstance) {
@@ -20,12 +25,17 @@ namespace TAVJ {
             _entity = playerInstance;
             _controller = _entity.GetComponent<CharacterController>();
             _inputManager = new InputManager();
+            _health = 100;
+            _head = _entity.FindInChildren("RigSpine1");
         }
 
-        public void SerializePosition(BitBuffer buffer) {
+        public void Serialize(BitBuffer buffer) {
             var position = _entity.transform.position;
             var rotation = _entity.transform.rotation;
+            var headRotation = _head.transform.rotation;
             buffer.PutInt(id);
+            buffer.PutInt(_inputManager.MostBigInput);
+            buffer.PutInt(_health);
             buffer.PutFloat(position.x);
             buffer.PutFloat(position.y);
             buffer.PutFloat(position.z);
@@ -33,6 +43,10 @@ namespace TAVJ {
             buffer.PutFloat(rotation.y);
             buffer.PutFloat(rotation.z);
             buffer.PutFloat(rotation.w);
+            buffer.PutFloat(headRotation.x);
+            buffer.PutFloat(headRotation.y);
+            buffer.PutFloat(headRotation.z);
+            buffer.PutFloat(headRotation.w);
         }
 
         public void DeserializeInputs(BitBuffer buffer) {
@@ -40,7 +54,7 @@ namespace TAVJ {
         }
 
         public void ExecuteInputs() {
-            _inputManager.ExecuteInputs(_controller);
+            _inputManager.ExecuteInputs(_entity);
         }
 
         public void ExecuteGravity() {
@@ -51,8 +65,14 @@ namespace TAVJ {
 
         public bool IsMoving() {
             var isMoving = _entity.transform.hasChanged;
+            var isHeadMoving = _head.transform.hasChanged;
             _entity.transform.hasChanged = false;
-            return isMoving;
+            _head.transform.hasChanged = false;
+            return isMoving && isHeadMoving;
+        }
+
+        public override string ToString() {
+            return "" + id;
         }
     }
 }

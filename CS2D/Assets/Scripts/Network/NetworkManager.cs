@@ -8,6 +8,7 @@ using System.Linq;
 namespace TAVJ {
     public class NetworkManager {
         private Channel _channel;
+        private float _latency = 0;
 
         public NetworkManager(string ip, int clientPort, int serverPort) {
             _channel = new Channel(ip, clientPort, serverPort);
@@ -30,7 +31,7 @@ namespace TAVJ {
             packet.buffer.PutInt(clientData.id);
             packet.buffer.PutInt(clients.Count);
             foreach (var client in clients) {
-                client.SerializePosition(packet.buffer);
+                client.Serialize(packet.buffer);
             }
             packet.buffer.Flush();
             _channel.Send(packet, clientData.endpoint);
@@ -40,7 +41,7 @@ namespace TAVJ {
         public void SendJoinBroadcast(ClientData clientData, List<ClientData> clients) {
             var packet = Packet.Obtain();
             packet.buffer.PutBits((int) NetworkEvent.EventType.JOIN_BROADCAST, 0, Enum.GetValues(typeof(NetworkEvent.EventType)).Length);
-            clientData.SerializePosition(packet.buffer);
+            clientData.Serialize(packet.buffer);
             packet.buffer.Flush();
             SendToAllClientsExceptSender(clients, packet, clientData.id);
             packet.Free();
@@ -57,15 +58,6 @@ namespace TAVJ {
             packet.Free();
         }
 
-        public void SendInputAck(ClientData client) {
-            var packet = Packet.Obtain();
-            packet.buffer.PutBits((int) NetworkEvent.EventType.INPUT_ACK, 0, Enum.GetValues(typeof(NetworkEvent.EventType)).Length);
-            packet.buffer.PutInt(client.InputManager.MostBigInput);
-            packet.buffer.Flush();
-            _channel.Send(packet, client.endpoint);
-            packet.Free();
-        }
-
         public void SendSnapshots(List<ClientData> clients) {
             var packet = Packet.Obtain();
             packet.buffer.PutBits((int) NetworkEvent.EventType.SNAPSHOT, 0, Enum.GetValues(typeof(NetworkEvent.EventType)).Length);
@@ -73,7 +65,7 @@ namespace TAVJ {
             packet.buffer.PutInt(clientsMoving.Count);
             if(clientsMoving.Count > 0) {
                 foreach (var client in clientsMoving) {
-                    client.SerializePosition(packet.buffer);
+                    client.Serialize(packet.buffer);
                 }
             }
             packet.buffer.Flush();

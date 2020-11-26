@@ -10,6 +10,9 @@ namespace TAVJ {
         private float _promedyBetweenSnapshots = 0;
         private DateTime _lastTimestamp;
         private Snapshot _currentSnapshot = null;
+        public Snapshot CurrentSnapshot {
+            get { return _currentSnapshot; }
+        }
 
         public SnapshotManager() {
             _snapshotQueue = new Queue<Snapshot>();
@@ -23,10 +26,10 @@ namespace TAVJ {
             }
         }
 
-        public void Interpolate(Dictionary<int, Player> players, float time, int _clientId) {
+        public void Interpolate(Dictionary<int, Player> players, float time, int clientId) {
             if(_currentSnapshot != null) {
                 foreach(var playerId in _currentSnapshot.GetClientsIds()) {
-                    if(players.ContainsKey(playerId)) {
+                    if(clientId != playerId && players.ContainsKey(playerId)) {
                         players[playerId].Interpolate(_currentSnapshot.GetClient(playerId), time/(1f/20f));
                     }
                 }

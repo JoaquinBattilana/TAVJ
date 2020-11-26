@@ -31,14 +31,14 @@ namespace TAVJ {
             }
         }
 
-        public void Add(float horizontal, float vertical) {
-            ClientInput input = new ClientInput(_inputUidGenerator, horizontal, vertical);
+        public void Add(float horizontal, float vertical, float mouseX, float mouseY) {
+            ClientInput input = new ClientInput(_inputUidGenerator, horizontal, vertical, mouseX, mouseY);
             _inputUidGenerator++;
             _inputs.Add(input);
         }
 
-        public void PredictLast(CharacterController controller) {
-            
+        public void PredictLastInput(Player player) {
+            _inputs[_inputs.Count-1].Execute(player.Entity);
         }
 
         public void Serialize(BitBuffer buffer) {
@@ -47,9 +47,9 @@ namespace TAVJ {
             }
         }
 
-        public void ExecuteInputs(CharacterController controller) {
+        public void ExecuteInputs(GameObject entity) {
             foreach(ClientInput input in _inputs) {
-                input.Execute(controller);
+                input.Execute(entity);
                 if(input.Number > _mostBigInput) {
                     _mostBigInput = input.Number;
                 }
@@ -57,13 +57,30 @@ namespace TAVJ {
             _inputs.Clear();
         }
 
-        public void RemoveAckInputs(BitBuffer buffer) {
-            _mostBigInput = buffer.GetInt();
+        public void ExecuteConciliateInputs(GameObject dummy) {
+            foreach(ClientInput input in _inputs) {
+                input.Execute(dummy);
+                dummy.GetComponent<CharacterController>().Move(Physics.gravity * Time.deltaTime);
+            }
+        }
+
+        public void ExecuteLast(GameObject entity) {
+            _inputs[_inputs.Count-1].Execute(entity);
+        }
+
+        public void RemoveAckInputs(int mostBigInput) {
+            _mostBigInput = mostBigInput;
             _inputs = _inputs.Where(input => input.Number > _mostBigInput).ToList();
         }
 
         public enum Type {
             MOVEMENT = 0
+        }
+
+        public override string ToString() {
+            string str = string.Format("Input más grande: {0}", _mostBigInput);
+            str += string.Format("Cantidad de inputs = {0}", _inputs.Count);
+            return str;
         }
     }
 }
